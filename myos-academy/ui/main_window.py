@@ -49,7 +49,8 @@ class MainWindow(QMainWindow):
     def _build_central(self) -> None:
         splitter = QSplitter(Qt.Horizontal)
         self.roadmap_tree = RoadmapTree(self.progress)
-        self.lesson_panel = LessonPanel(self.progress)
+        self.lesson_panel = LessonPanel(self.progress, self.settings)
+        self.lesson_panel.settings_changed.connect(lambda: self.settings.save(self.db))
         self.roadmap_tree.lesson_selected.connect(self.lesson_panel.show_lesson)
         self.roadmap_tree.stage_selected.connect(self.lesson_panel.show_stage)
         self.roadmap_tree.progress_changed.connect(self._on_progress_changed)
@@ -88,6 +89,7 @@ class MainWindow(QMainWindow):
             self._on_progress_changed()  # tree colours and code highlighting depend on the palette
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        self.lesson_panel.reader.stop()
         wait_for_all()
         self.db.close()
         super().closeEvent(event)

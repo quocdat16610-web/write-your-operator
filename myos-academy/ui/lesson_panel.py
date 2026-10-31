@@ -5,8 +5,19 @@ import html
 import re
 
 from PySide6.QtCore import QUrl, Signal
-from PySide6.QtGui import QCursor, QDesktopServices, QGuiApplication, QPalette
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QTextBrowser, QToolTip, QVBoxLayout, QWidget
+from PySide6.QtGui import QColor, QCursor, QDesktopServices, QGuiApplication, QPalette, QTextCursor, QTextFormat
+from PySide6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTextBrowser,
+    QTextEdit,
+    QToolTip,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.lesson_content import load_lesson
 from core.progress import STATUS_LABELS, ProgressStore, Status
@@ -19,7 +30,10 @@ from core.roadmap import (
     stage_by_number,
     videos_for,
 )
+from core.settings import SPEEDS, AppSettings
+from core.speech_text import Segment, lecture_segments, summary_segments
 from ui.lesson_renderer import RenderedLesson, render_lesson
+from ui.read_aloud import ReadAloudController
 
 WELCOME_HTML = """
 <h1>MyOS Academy</h1>
@@ -42,9 +56,14 @@ def rich(text: str) -> str:
 class LessonPanel(QWidget):
     progress_changed = Signal()
 
-    def __init__(self, progress: ProgressStore) -> None:
+    settings_changed = Signal()  # e.g. reading speed, so the main window can save it
+
+    def __init__(self, progress: ProgressStore, settings: AppSettings) -> None:
         super().__init__()
         self.progress = progress
+        self.settings = settings
+        self.segments: list[Segment] = []
+        self._highlight_from = 0
         self.lesson_id: str | None = None
         self.revealed_hints: set[int] = set()
         self.rendered: RenderedLesson | None = None
@@ -70,11 +89,38 @@ class LessonPanel(QWidget):
         for button in (self.unlock_button, self.start_button, self.done_button):
             buttons.addWidget(button)
 
+        self.lecture_button = QPushButton("🎓 Nghe giảng")
+        self.lecture_button.setToolTip("Đọc to mục tiêu, lý thuyết và lỗi hay gặp (bỏ qua code và bảng)")
+        self.lecture_button.clicked.connect(lambda: self._read(lecture_segments))
+        self.summary_button = QPushButton("🎧 Nghe tóm tắt")
+        self.summary_button.setToolTip("Đọc phần Bản nghe")
+        self.summary_button.clicked.connect(lambda: self._read(summary_segments))
+        self.stop_button = QPushButton("⏹ Dừng")
+        self.stop_button.clicked.connect(self._stop_reading)
+        self.speed_combo = QComboBox()
+        for value, label in SPEEDS.items():
+            self.speed_combo.addItem(label, value)
+        self.speed_combo.setCurrentIndex(max(self.speed_combo.findData(settings.speech_speed), 0))
+        self.speed_combo.currentIndexChanged.connect(self._on_speed_changed)
+        self.reading_label = QLabel()
+
+        audio = QHBoxLayout()
+        for widget in (self.lecture_button, self.summary_button, self.stop_button, QLabel("Tốc độ:"),
+                       self.speed_combo, self.reading_label):
+            audio.addWidget(widget)
+        audio.addStretch()
+
         self.header = QWidget()
         header_layout = QVBoxLayout(self.header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.addWidget(self.title_label)
         header_layout.addLayout(buttons)
+        header_layout.addLayout(audio)
+
+        self.reader = ReadAloudController(settings, self)
+        self.reader.segment_started.connect(self._on_segment_started)
+        self.reader.stopped.connect(self._on_reading_stopped)
+        self.reader.error.connect(self._on_reading_error)
 
         self.browser = QTextBrowser()
         self.browser.setOpenLinks(False)  # every link goes through _on_link
@@ -83,15 +129,18 @@ class LessonPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.header)
         layout.addWidget(self.browser)
+        self._on_reading_stopped()
         self.show_welcome()
 
     # ---- Pages ---------------------------------------------------------
     def show_welcome(self) -> None:
+        self.reader.stop()
         self.lesson_id = None
         self.header.hide()
         self.browser.setHtml(WELCOME_HTML)
 
     def show_stage(self, number: int) -> None:
+        self.reader.stop()
         self.lesson_id = None
         self.header.hide()
         stage = stage_by_number(number)
@@ -135,6 +184,8 @@ class LessonPanel(QWidget):
         self.browser.setHtml("".join(parts))
 
     def show_lesson(self, lesson_id: str) -> None:
+        if lesson_id != self.lesson_id:
+            self.reader.stop()
         self.lesson_id = lesson_id
         self.revealed_hints = set()
         self.header.show()
@@ -154,6 +205,10 @@ class LessonPanel(QWidget):
         self.unlock_button.setVisible(not unlocked)
         self.start_button.setVisible(unlocked and status == Status.NOT_STARTED)
         self.done_button.setVisible(unlocked and status != Status.DONE)
+
+        has_content = unlocked and load_lesson(lesson.id) is not None
+        for widget in (self.lecture_button, self.summary_button, self.speed_combo):
+            widget.setEnabled(has_content)
 
         if not unlocked:
             previous = previous_lesson(lesson.id)
@@ -195,6 +250,62 @@ class LessonPanel(QWidget):
             self.refresh()
         elif scheme in ("http", "https"):
             QDesktopServices.openUrl(url)
+
+    # ---- Read aloud ----------------------------------------------------
+    def _read(self, make_segments) -> None:
+        source = load_lesson(self.lesson_id) if self.lesson_id else None
+        if source is None:
+            return
+        self.segments = make_segments(source)
+        self._highlight_from = 0
+        self.stop_button.setEnabled(True)
+        self.reading_label.setText("Đang chuẩn bị giọng đọc…")
+        self.reader.start(self.segments, float(self.speed_combo.currentData()))
+
+    def _stop_reading(self) -> None:
+        self.reader.stop()
+
+    def _on_speed_changed(self) -> None:
+        self.settings.speech_speed = self.speed_combo.currentData()
+        self.settings_changed.emit()
+        self.reader.set_speed(float(self.settings.speech_speed))
+
+    def _on_segment_started(self, index: int) -> None:
+        self.reading_label.setText(f"Đang đọc đoạn {index + 1}/{len(self.segments)}")
+        self._highlight(self.segments[index].anchor)
+
+    def _on_reading_stopped(self) -> None:
+        self.stop_button.setEnabled(False)
+        self.reading_label.setText("")
+        self.browser.setExtraSelections([])
+
+    def _on_reading_error(self, message: str) -> None:
+        QMessageBox.warning(self, "Giọng đọc", message)
+
+    def _highlight(self, anchor: str) -> None:
+        """Highlight the on-screen paragraph that starts with the text being read, and scroll to it."""
+        document = self.browser.document()
+        found = QTextCursor()
+        for length in (60, 30, 15):  # long prefixes first; short ones survive small formatting differences
+            found = document.find(anchor[:length], self._highlight_from)
+            if not found.isNull():
+                break
+        if found.isNull():
+            return
+        self._highlight_from = found.selectionStart()
+        found.movePosition(QTextCursor.StartOfBlock)
+        found.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
+        selection = QTextEdit.ExtraSelection()
+        selection.cursor = found
+        color = QColor(self.palette().color(QPalette.Highlight))
+        color.setAlpha(90)
+        selection.format.setBackground(color)
+        selection.format.setProperty(QTextFormat.FullWidthSelection, True)
+        self.browser.setExtraSelections([selection])
+        caret = QTextCursor(found)
+        caret.clearSelection()
+        self.browser.setTextCursor(caret)
+        self.browser.ensureCursorVisible()
 
     # ---- Actions -------------------------------------------------------
     def _change(self, status: Status) -> None:

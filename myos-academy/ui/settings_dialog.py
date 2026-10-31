@@ -7,12 +7,14 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
+    QLabel,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
 from core.settings import EDGE_VOICES, THEMES, TTS_ENGINES, AppSettings
+from core.tts import list_pyttsx3_voices
 
 
 def _fill_combo(combo: QComboBox, items: dict[str, str], current: str) -> None:
@@ -49,12 +51,36 @@ class SettingsDialog(QDialog):
         self.edge_voice_combo = QComboBox()
         _fill_combo(self.edge_voice_combo, EDGE_VOICES, self.settings.edge_voice)
         form.addRow("Giọng edge-tts:", self.edge_voice_combo)
+
+        self.windows_voice_combo = QComboBox()
+        self.windows_voice_combo.addItem("Tự chọn giọng tiếng Việt nếu có", "")
+        voices = list_pyttsx3_voices()
+        for voice_id, label in voices:
+            self.windows_voice_combo.addItem(label, voice_id)
+        self.windows_voice_combo.setCurrentIndex(
+            max(self.windows_voice_combo.findData(self.settings.pyttsx3_voice), 0))
+        form.addRow("Giọng Windows:", self.windows_voice_combo)
+
+        has_vietnamese = any("tiếng Việt" in label for _, label in voices)
+        note = QLabel(
+            "edge-tts: giọng tiếng Việt tự nhiên, cần Internet; đoạn đã nghe được lưu lại để nghe offline.\n"
+            "pyttsx3: chạy offline bằng giọng có sẵn của Windows."
+            + ("" if has_vietnamese else
+               " Máy bạn chưa có giọng tiếng Việt cho pyttsx3, nên nó sẽ đọc tiếng Việt bằng giọng tiếng Anh "
+               "(rất khó nghe). Nên dùng edge-tts.")
+        )
+        note.setWordWrap(True)
+        note.setEnabled(False)
+        form.addRow(note)
+
         self.engine_combo.currentIndexChanged.connect(self._update_voice_widgets)
         self._update_voice_widgets()
         return group
 
     def _update_voice_widgets(self) -> None:
-        self.edge_voice_combo.setEnabled(self.engine_combo.currentData() == "edge")
+        edge = self.engine_combo.currentData() == "edge"
+        self.edge_voice_combo.setEnabled(edge)
+        self.windows_voice_combo.setEnabled(not edge)
 
     def _build_display_group(self) -> QGroupBox:
         group = QGroupBox("Hiển thị")
@@ -72,6 +98,7 @@ class SettingsDialog(QDialog):
     def accept(self) -> None:
         self.settings.tts_engine = self.engine_combo.currentData()
         self.settings.edge_voice = self.edge_voice_combo.currentData()
+        self.settings.pyttsx3_voice = self.windows_voice_combo.currentData()
         self.settings.font_size = self.font_spin.value()
         self.settings.theme = self.theme_combo.currentData()
         super().accept()

@@ -14,6 +14,8 @@ EDGE_VOICES = {
     "vi-VN-NamMinhNeural": "Nam Minh (nam)",
 }
 
+SPEEDS = {"0.75": "0.75×", "1.0": "1×", "1.25": "1.25×", "1.5": "1.5×"}
+
 THEMES = {"system": "Theo hệ thống", "light": "Sáng", "dark": "Tối"}
 
 
@@ -22,6 +24,7 @@ class AppSettings:
     tts_engine: str = "edge"
     edge_voice: str = "vi-VN-HoaiMyNeural"
     pyttsx3_voice: str = ""
+    speech_speed: str = "1.0"
     font_size: int = 11
     theme: str = "system"
 

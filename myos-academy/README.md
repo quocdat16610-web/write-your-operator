@@ -2,7 +2,7 @@
 
 Ứng dụng desktop Windows dạy bạn tự viết hệ điều hành bằng C++. Bài học được soạn sẵn và đóng gói trong app: không cần mạng, không cần API key.
 
-> Trạng thái: **Bước 3**: hiển thị bài học soạn sẵn. Đã có **Bài 0.1**; các bài sau được thêm dần.
+> Trạng thái: **Bước 4**: bài học soạn sẵn + nghe đọc (giảng cả bài hoặc bản tóm tắt). Đã có **Bài 0.1**; các bài sau được thêm dần.
 
 ## Cấu trúc thư mục
 
@@ -17,7 +17,9 @@ myos-academy/
 │   ├── settings.py      # AppSettings: giọng đọc, cỡ chữ, giao diện
 │   ├── roadmap.py       # Lộ trình: giai đoạn, bài, tài liệu tham khảo, từ khóa video
 │   ├── progress.py      # Trạng thái bài (chưa học/đang học/xong) và luật mở khóa
-│   └── lesson_content.py # Đọc file bài học trong content/lessons
+│   ├── lesson_content.py # Đọc file bài học trong content/lessons
+│   ├── speech_text.py   # Tách bài thành các đoạn để đọc (bỏ code, bảng; đọc ký hiệu thành chữ)
+│   └── tts.py           # Tạo giọng đọc bằng edge-tts hoặc pyttsx3, lưu cache âm thanh
 ├── data/
 │   └── database.py      # SQLite + migration theo PRAGMA user_version
 └── ui/                  # Giao diện PySide6
@@ -25,9 +27,11 @@ myos-academy/
     ├── roadmap_tree.py  # Cây lộ trình bên trái (chuột phải: đổi trạng thái, mở khóa)
     ├── lesson_panel.py  # Trang chào, trang giai đoạn, trang bài
     ├── lesson_renderer.py # Markdown → HTML: tô màu code, nút Copy, gợi ý ẩn, nút YouTube
+    ├── read_aloud.py    # Điều khiển đọc to: tạo âm thanh ở luồng nền, đọc trước đoạn kế tiếp
+    ├── audio_player.py  # Phát mp3/wav bằng MCI có sẵn trong Windows
     ├── settings_dialog.py
     ├── theme.py         # Sáng/tối, cỡ chữ
-    └── workers.py       # Chạy tác vụ mạng trong luồng nền
+    └── workers.py       # Chạy tác vụ nặng trong luồng nền
 ```
 
 Tiến độ học và cài đặt nằm ở `%APPDATA%\MyOSAcademy\academy.db`.
@@ -62,6 +66,20 @@ Mỗi bài là một file Markdown `content/lessons/<mã bài>.md` với các m�
 - Dòng bắt đầu bằng `Gợi ý:` bị ẩn, chỉ hiện khi bấm "Xin gợi ý".
 - Dòng `- youtube: từ khóa | ghi chú` thành nút mở trang tìm kiếm YouTube.
 - Khối code ghi tên file bằng ```` ```nasm title=boot.asm ````.
+
+## Nghe đọc
+
+Trong mỗi bài có hai nút:
+
+- **🎓 Nghe giảng**: đọc to mục tiêu, lý thuyết và lỗi hay gặp, bỏ qua code, bảng và sơ đồ.
+- **🎧 Nghe tóm tắt**: đọc phần Bản nghe.
+
+Đoạn đang đọc được tô sáng và trang tự cuộn theo. Chọn bộ đọc trong **Cài đặt**:
+
+- **edge-tts** (mặc định): giọng tiếng Việt tự nhiên (Hoài My, Nam Minh), cần Internet. Đoạn đã nghe được lưu ở
+  `%APPDATA%\MyOSAcademy\audio`, nghe lại không cần mạng.
+- **pyttsx3**: offline, dùng giọng có sẵn của Windows. Muốn có giọng tiếng Việt, cài gói giọng nói tiếng Việt trong
+  Settings → Time & language → Speech; nếu không, nó đọc bằng giọng tiếng Anh.
 
 ## Build file .exe
 

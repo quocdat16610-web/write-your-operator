@@ -3,3 +3,5 @@ PySide6-Essentials==6.6.3.1; python_version < "3.10"
 PySide6-Essentials>=6.7; python_version >= "3.10"
 Markdown>=3.5
 Pygments>=2.17
+edge-tts>=6.1
+pyttsx3>=2.90; platform_system == "Windows"
