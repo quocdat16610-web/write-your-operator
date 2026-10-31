@@ -9,11 +9,12 @@
 ```
 myos-academy/
 ├── main.py              # Điểm khởi động app
+├── run.bat              # Bấm đúp để tạo .venv, cài thư viện và chạy app
 ├── requirements.txt
 ├── content/lessons/     # Bài học soạn sẵn: 0.1.md, 0.2.md, ...
 ├── core/                # Logic không phụ thuộc giao diện
 │   ├── paths.py         # Đường dẫn %APPDATA%\MyOSAcademy
-│   ├── settings.py      # AppSettings: model, giọng đọc, cỡ chữ, giao diện
+│   ├── settings.py      # AppSettings: giọng đọc, cỡ chữ, giao diện
 │   ├── roadmap.py       # Lộ trình: giai đoạn, bài, tài liệu tham khảo, từ khóa video
 │   ├── progress.py      # Trạng thái bài (chưa học/đang học/xong) và luật mở khóa
 │   └── lesson_content.py # Đọc file bài học trong content/lessons
@@ -32,6 +33,11 @@ myos-academy/
 Tiến độ học và cài đặt nằm ở `%APPDATA%\MyOSAcademy\academy.db`.
 
 ## Chạy từ mã nguồn (Windows)
+
+**Cách dễ nhất:** bấm đúp vào `run.bat`. Lần đầu nó tự tạo môi trường ảo `.venv`, cài thư viện vào **đúng** Python đó
+rồi mở app. Các lần sau bấm đúp là chạy.
+
+**Cách thủ công:**
 
 Cần Python 3.11 trở lên (tải tại python.org, nhớ tích "Add python.exe to PATH").
 

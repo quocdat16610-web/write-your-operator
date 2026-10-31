@@ -3,7 +3,17 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtWidgets import QApplication
+try:
+    import markdown  # noqa: F401
+    import pygments  # noqa: F401
+    from PySide6.QtWidgets import QApplication
+except ImportError as exc:
+    # Most common cause: pip installed into a different Python than the one running this file.
+    sys.exit(
+        f"Thieu thu vien: {exc}\n"
+        f"Python dang chay: {sys.executable}\n"
+        "Cach chay dung: bam dup vao run.bat (no tu cai thu vien vao dung Python)."
+    )
 
 from core.paths import database_path
 from core.settings import AppSettings
