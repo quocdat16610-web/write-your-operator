@@ -53,3 +53,18 @@ Vào console.anthropic.com → API Keys → Create Key, rồi dán key vào **T�
 ## Build file .exe
 
 Có ở Bước 7.
+
+## Lỗi hay gặp khi chạy
+
+**`ImportError: DLL load failed while importing Shiboken: The specified procedure could not be found`**
+
+Nguyên nhân thường gặp nhất là bộ thư viện Microsoft Visual C++ Runtime trên máy đã cũ. PySide6 cần bản mới.
+
+1. Cài bản mới nhất của **Microsoft Visual C++ Redistributable (x64)**: https://aka.ms/vs/17/release/vc_redist.x64.exe, rồi khởi động lại PowerShell.
+2. Cài lại PySide6 cho sạch:
+   ```powershell
+   pip uninstall -y PySide6 PySide6-Essentials PySide6-Addons shiboken6
+   pip install --no-cache-dir -r requirements.txt
+   ```
+3. Kiểm tra Python là bản **64-bit**, từ **3.11 đến 3.13**:
+   `python -c "import sys, platform; print(sys.version, platform.architecture()[0])"`
