@@ -5,12 +5,15 @@ cd /d "%~dp0"
 set "VENV_PY=.venv\Scripts\python.exe"
 set "CHECK_PY=import sys; sys.exit(sys.version_info[:3] < (3, 9, 2))"
 
-rem Prefer a recent Python if the py launcher knows one.
+rem Prefer a recent Python: first the versions the py launcher knows, then plain "python".
 set "NEW_PY="
-for %%V in (3.13 3.12 3.11 3.10) do (
+for %%V in (3.12 3.13 3.11 3.10 3.14) do (
     if not defined NEW_PY (
         py -%%V -c "pass" >nul 2>&1 && set "NEW_PY=py -%%V"
     )
+)
+if not defined NEW_PY (
+    python -c "import sys; sys.exit(sys.version_info < (3, 10))" >nul 2>&1 && set "NEW_PY=python"
 )
 
 rem Python 3.9.0/3.9.1 have a typing bug that breaks edge-tts ("unhashable type: 'list'").
@@ -50,7 +53,10 @@ rem Newer PySide6 builds fail to load on some machines ("DLL load failed"); fall
 "%VENV_PY%" -c "import PySide6.QtWidgets" 2>nul
 if errorlevel 1 (
     echo [MyOS Academy] PySide6 moi khong chay tren may nay, chuyen sang ban 6.6.3.1...
-    "%VENV_PY%" -m pip install --disable-pip-version-check -q --force-reinstall "PySide6-Essentials==6.6.3.1" "shiboken6==6.6.3.1"
+    "%VENV_PY%" -m pip install --disable-pip-version-check -q --force-reinstall "PySide6-Essentials==6.6.3.1" "shiboken6==6.6.3.1" || (
+        echo Khong cai duoc PySide6 6.6.3.1 cho Python nay. Hay cai Microsoft Visual C++ Redistributable:
+        echo https://aka.ms/vs/17/release/vc_redist.x64.exe
+    )
 )
 
 "%VENV_PY%" main.py
