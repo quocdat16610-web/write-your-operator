@@ -49,8 +49,8 @@ class _SynthThread(threading.Thread):
             job = self.jobs.get()
             if job.generation != self.current_generation():
                 continue  # the user stopped or restarted: skip stale work
-            path = tts.cache_path(job.engine, job.voice, job.speed, job.text)
             try:
+                path = tts.cache_path(job.engine, job.voice, job.speed, job.text)
                 if not path.exists():
                     if job.engine == "edge":
                         tts.synthesize_edge(job.text, job.voice, job.speed, path)
@@ -58,8 +58,8 @@ class _SynthThread(threading.Thread):
                         if self._pyttsx3 is None:
                             self._pyttsx3 = tts.Pyttsx3Speaker()
                         self._pyttsx3.synthesize(job.text, job.voice, job.speed, path)
-            except Exception as exc:
-                self.bridge.failed.emit(job.generation, str(exc))
+            except Exception as exc:  # anything at all: the loop must keep running
+                self.bridge.failed.emit(job.generation, str(exc) or repr(exc))
                 continue
             self.bridge.ready.emit(job.generation, job.index, str(path))
 
