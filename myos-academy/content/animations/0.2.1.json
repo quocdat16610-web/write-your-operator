@@ -1,0 +1,34 @@
+{
+  "animations": [
+    {
+      "title": "Thanh ghi và lệnh mov",
+      "intro": "Mọi thanh ghi đang bằng 0. Hãy nhìn bảng thanh ghi bên phải: ô nào vừa thay đổi sẽ sáng màu vàng.",
+      "code": [
+        "_start:",
+        "    mov eax, 7",
+        "    mov ebx, eax",
+        "    mov ecx, 0x1234",
+        "    mov cl, 0xFF",
+        "    mov ebx, 42",
+        "    mov eax, 1",
+        "    int 0x80"
+      ],
+      "notes": {
+        "2": "mov eax, 7: đặt số 7 vào eax. Đọc là eax nhận 7, đích đứng trước, nguồn đứng sau.",
+        "3": "mov ebx, eax: chép giá trị của eax sang ebx. Giờ cả hai đều bằng 7, eax không bị mất.",
+        "4": "mov ecx, 0x1234: số viết ở hệ mười sáu. 0x1234 bằng 4660.",
+        "5": "mov cl, 0xFF: cl là byte thấp nhất của ecx. Chỉ byte đó đổi, nên ecx thành 0x12FF. Ba byte trên giữ nguyên.",
+        "6": "mov ebx, 42: ghi đè ebx. Số 7 cũ trong ebx mất hẳn.",
+        "7": "mov eax, 1: chuẩn bị gọi Linux. Số 1 nghĩa là system call exit, thoát chương trình.",
+        "8": "int 0x80: nhờ Linux thoát chương trình, lấy ebx làm mã thoát."
+      },
+      "outro": "Xong. ebx bằng 42 nên mã thoát của chương trình là 42. Để ý: mov chỉ chép, nó không làm mất giá trị ở nguồn.",
+      "show": [
+        "eax",
+        "ebx",
+        "ecx",
+        "edx"
+      ]
+    }
+  ]
+}

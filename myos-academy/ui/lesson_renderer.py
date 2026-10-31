@@ -20,7 +20,13 @@ from core.roadmap import youtube_search_url
 FENCE_RE = re.compile(r"^```([\w+-]*)[ \t]*(?:title=(\S+))?[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 HINT_RE = re.compile(r"^Gợi ý:[ \t]*(.+)$", re.M)
 YOUTUBE_RE = re.compile(r"^- youtube:[ \t]*(.+?)[ \t]*(?:\|[ \t]*(.+))?$", re.M)
+IMAGE_WIDTH = 720
 LEXER_ALIASES = {"asm": "nasm", "linker": "text", "ld": "text", "sh": "bash", "shell": "bash"}
+
+
+def rich(text: str) -> str:
+    """Escape text for HTML and turn `backticks` into <code>."""
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text))
 
 
 @dataclass
@@ -86,6 +92,7 @@ def render_lesson(source: str, revealed_hints: set[int], dark: bool) -> Rendered
 
     body = markdown.markdown(text, extensions=["tables", "sane_lists"])
     body = body.replace("<table>", "<table border='1' cellspacing='0' cellpadding='6' width='100%'>")
+    body = body.replace("<img ", f"<img width='{IMAGE_WIDTH}' ")  # PNGs are drawn at 2x for sharpness
     for index, block in enumerate(blocks):
         body = body.replace(f"<p>CODEBLOCK{index}</p>", _code_html(index, block, dark))
     for index, hint in enumerate(hints):

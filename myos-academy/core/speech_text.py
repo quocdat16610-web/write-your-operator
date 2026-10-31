@@ -57,7 +57,7 @@ def _paragraphs(body: str) -> list[Segment]:
         else:
             chunks = [" ".join(lines)]
         for chunk in chunks:
-            if chunk.startswith(("Gợi ý:", "- youtube:")):
+            if chunk.startswith(("Gợi ý:", "- youtube:", "![")):
                 continue
             plain = plain_text(chunk)
             if plain:

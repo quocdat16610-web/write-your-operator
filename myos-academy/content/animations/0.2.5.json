@@ -1,0 +1,47 @@
+{
+  "animations": [
+    {
+      "title": "C++ gọi add_numbers(30, 12) theo cdecl",
+      "intro": "Đoạn đầu là phần trình biên dịch C cộng cộng sinh ra khi gặp add_numbers của 30 và 12. Đoạn sau là hàm assembly bạn viết. Theo dõi ebp và bảng stack.",
+      "code": [
+        "_start:",
+        "    push 12",
+        "    push 30",
+        "    call add_numbers",
+        "    add esp, 8",
+        "    mov ebx, eax",
+        "    mov eax, 1",
+        "    int 0x80",
+        "add_numbers:",
+        "    push ebp",
+        "    mov ebp, esp",
+        "    mov eax, [ebp + 8]",
+        "    add eax, [ebp + 12]",
+        "    pop ebp",
+        "    ret"
+      ],
+      "notes": {
+        "2": "Tham số được đẩy từ phải sang trái. Tham số cuối là 12 được đẩy trước.",
+        "3": "Rồi đến tham số đầu tiên là 30. Nó nằm ngay trên số 12.",
+        "4": "call đẩy địa chỉ quay về lên stack, ngay trên số 30, rồi nhảy vào hàm.",
+        "5": "Đã quay về từ hàm. Người gọi cộng esp thêm 8 để bỏ hai tham số, mỗi tham số 4 byte.",
+        "6": "Giá trị trả về nằm trong eax. Chép sang ebx làm mã thoát.",
+        "7": "eax bằng 1: system call exit.",
+        "8": "Thoát chương trình với mã thoát 42.",
+        "10": "Vào hàm. Việc đầu tiên: cất ebp của người gọi lên stack, vì cdecl bắt phải trả lại nguyên vẹn.",
+        "11": "ebp nhận esp. Từ giờ ebp là mốc cố định: ebp cộng 4 là địa chỉ quay về, ebp cộng 8 là tham số a, ebp cộng 12 là tham số b.",
+        "12": "Đọc bộ nhớ tại ebp cộng 8: đó là a bằng 30.",
+        "13": "Cộng thêm giá trị ở ebp cộng 12: đó là b bằng 12. eax bằng 42.",
+        "14": "Trả lại ebp cũ cho người gọi. esp giờ chỉ đúng vào địa chỉ quay về.",
+        "15": "ret lấy địa chỉ quay về và nhảy về người gọi. Kết quả 42 đang nằm sẵn trong eax."
+      },
+      "outro": "eax bằng 42 là giá trị trả về. Người gọi tự dọn tham số bằng add esp, 8, nên stack trở lại như lúc đầu. Đó là quy ước cdecl.",
+      "show": [
+        "eax",
+        "ebx",
+        "ebp",
+        "esp"
+      ]
+    }
+  ]
+}

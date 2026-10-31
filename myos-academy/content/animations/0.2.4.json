@@ -1,0 +1,56 @@
+{
+  "animations": [
+    {
+      "title": "Stack: push, pop, call, ret",
+      "intro": "Hãy nhìn bảng stack ở góc dưới bên phải. Mũi tên esp chỉ vào đỉnh stack. Stack mọc xuống: mỗi lần push, địa chỉ của đỉnh giảm đi 4.",
+      "code": [
+        "_start:",
+        "    mov eax, 10",
+        "    mov ebx, 20",
+        "    push eax",
+        "    push ebx",
+        "    pop eax",
+        "    pop ebx",
+        "    mov eax, ebx",
+        "    call double_it",
+        "    call double_it",
+        "    add eax, 2",
+        "    mov ebx, eax",
+        "    mov eax, 1",
+        "    int 0x80",
+        "double_it:",
+        "    add eax, eax",
+        "    ret"
+      ],
+      "notes": {
+        "2": "eax bằng 10.",
+        "3": "ebx bằng 20.",
+        "4": "push eax: esp giảm 4, rồi số 10 được ghi vào đỉnh stack.",
+        "5": "push ebx: đặt 20 lên trên số 10. Giờ 20 nằm ở đỉnh.",
+        "6": "pop eax: lấy giá trị ở đỉnh, là 20, vào eax. esp tăng 4. Vào sau thì ra trước.",
+        "7": "pop ebx: lấy 10 vào ebx. Hai thanh ghi đã đổi chỗ cho nhau, và stack trống trở lại.",
+        "8": "eax bằng 10, chuẩn bị gọi hàm.",
+        "9": "call double_it: đẩy địa chỉ quay về lên stack, rồi nhảy vào hàm. Nhìn stack: có thêm ô địa chỉ quay về.",
+        "10": "Gọi hàm lần thứ hai. Lại một địa chỉ quay về được đẩy lên stack.",
+        "11": "Cộng thêm 2: eax bằng 42.",
+        "12": "Chép kết quả sang ebx làm mã thoát.",
+        "13": "eax bằng 1: system call exit.",
+        "14": "Thoát chương trình với mã thoát 42.",
+        "16": [
+          "Bên trong hàm: eax cộng chính nó, tức là nhân đôi. eax thành 20.",
+          "Nhân đôi lần nữa: eax thành 40."
+        ],
+        "17": [
+          "ret: lấy địa chỉ quay về khỏi stack và nhảy về ngay sau lệnh call đầu tiên.",
+          "ret lần hai: quay về ngay sau lệnh call thứ hai. Stack lại trống."
+        ]
+      },
+      "outro": "Kết quả 42. Mỗi lệnh call đẩy địa chỉ quay về lên stack, và lệnh ret lấy đúng địa chỉ đó ra để quay về.",
+      "show": [
+        "eax",
+        "ebx",
+        "esp"
+      ]
+    }
+  ]
+}

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import html
-import re
 
 from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QColor, QCursor, QDesktopServices, QGuiApplication, QPalette, QTextCursor, QTextFormat
@@ -10,6 +9,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QMessageBox,
     QPushButton,
     QTextBrowser,
@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.lesson_content import load_lesson
+from core.lesson_content import content_root, load_animations, load_lesson
 from core.progress import STATUS_LABELS, ProgressStore, Status
 from core.roadmap import (
     PHONE_REALITY_NOTE,
@@ -32,7 +32,8 @@ from core.roadmap import (
 )
 from core.settings import SPEEDS, AppSettings
 from core.speech_text import Segment, lecture_segments, summary_segments
-from ui.lesson_renderer import RenderedLesson, render_lesson
+from ui.lesson_renderer import RenderedLesson, render_lesson, rich
+from ui.animation_dialog import AnimationDialog
 from ui.read_aloud import ReadAloudController
 
 WELCOME_HTML = """
@@ -46,11 +47,6 @@ từ kernel x86 đầu tiên đến ARM64. Bài học được soạn sẵn tron
       (chuột phải để mở khóa thủ công).</li>
 </ol>
 """
-
-
-def rich(text: str) -> str:
-    """Escape text for HTML and turn `backticks` into <code>."""
-    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text))
 
 
 class LessonPanel(QWidget):
@@ -103,10 +99,13 @@ class LessonPanel(QWidget):
         self.speed_combo.setCurrentIndex(max(self.speed_combo.findData(settings.speech_speed), 0))
         self.speed_combo.currentIndexChanged.connect(self._on_speed_changed)
         self.reading_label = QLabel()
+        self.animation_button = QPushButton("🎬 Xem hoạt hình")
+        self.animation_button.setToolTip("Xem CPU chạy từng lệnh: thanh ghi và stack thay đổi, có thuyết minh")
+        self.animation_button.clicked.connect(self._open_animation)
 
         audio = QHBoxLayout()
-        for widget in (self.lecture_button, self.summary_button, self.stop_button, QLabel("Tốc độ:"),
-                       self.speed_combo, self.reading_label):
+        for widget in (self.animation_button, self.lecture_button, self.summary_button, self.stop_button,
+                       QLabel("Tốc độ:"), self.speed_combo, self.reading_label):
             audio.addWidget(widget)
         audio.addStretch()
 
@@ -124,6 +123,7 @@ class LessonPanel(QWidget):
 
         self.browser = QTextBrowser()
         self.browser.setOpenLinks(False)  # every link goes through _on_link
+        self.browser.setSearchPaths([str(content_root())])  # so <img src="images/x.png"> resolves
         self.browser.anchorClicked.connect(self._on_link)
 
         layout = QVBoxLayout(self)
@@ -209,6 +209,7 @@ class LessonPanel(QWidget):
         has_content = unlocked and load_lesson(lesson.id) is not None
         for widget in (self.lecture_button, self.summary_button, self.speed_combo):
             widget.setEnabled(has_content)
+        self.animation_button.setVisible(unlocked and bool(load_animations(lesson.id)))
 
         if not unlocked:
             previous = previous_lesson(lesson.id)
@@ -250,6 +251,21 @@ class LessonPanel(QWidget):
             self.refresh()
         elif scheme in ("http", "https"):
             QDesktopServices.openUrl(url)
+
+    # ---- Animations ----------------------------------------------------
+    def _open_animation(self) -> None:
+        animations = load_animations(self.lesson_id) if self.lesson_id else []
+        if len(animations) == 1:
+            self._play_animation(animations[0])
+        elif animations:
+            menu = QMenu(self)
+            for animation in animations:
+                menu.addAction(animation["title"], lambda a=animation: self._play_animation(a))
+            menu.exec(self.animation_button.mapToGlobal(self.animation_button.rect().bottomLeft()))
+
+    def _play_animation(self, animation: dict) -> None:
+        self.reader.stop()
+        AnimationDialog(animation, self.settings, self).exec()
 
     # ---- Read aloud ----------------------------------------------------
     def _read(self, make_segments) -> None:

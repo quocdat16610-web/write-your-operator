@@ -1,0 +1,34 @@
+{
+  "animations": [
+    {
+      "title": "Phép tính: add, imul, sub, inc",
+      "intro": "Chương trình thật đọc số 5 từ biến trong bộ nhớ. Ở đây ta bắt đầu bằng cách đặt 5 vào eax, rồi xem từng phép tính.",
+      "code": [
+        "_start:",
+        "    mov eax, 5",
+        "    add eax, 10",
+        "    imul eax, 3",
+        "    sub eax, 4",
+        "    inc eax",
+        "    mov ebx, eax",
+        "    mov eax, 1",
+        "    int 0x80"
+      ],
+      "notes": {
+        "2": "eax nhận 5. Trong bài, chỗ này là mov eax, [number]: đọc số 5 từ bộ nhớ.",
+        "3": "add eax, 10: eax cộng thêm 10, thành 15. Giống eax cộng bằng 10 trong Python.",
+        "4": "imul eax, 3: nhân eax với 3, thành 45.",
+        "5": "sub eax, 4: trừ 4, còn 41.",
+        "6": "inc eax: tăng thêm 1, thành 42. Lệnh inc ngắn hơn add eax, 1.",
+        "7": "Chép kết quả sang ebx để làm mã thoát.",
+        "8": "eax bằng 1: system call exit.",
+        "9": "Nhờ Linux thoát chương trình với mã thoát 42."
+      },
+      "outro": "Kết quả 42. Mỗi phép tính đều ghi đè lên toán hạng thứ nhất, giống phép cộng dồn trong Python.",
+      "show": [
+        "eax",
+        "ebx"
+      ]
+    }
+  ]
+}

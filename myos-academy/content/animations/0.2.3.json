@@ -1,0 +1,49 @@
+{
+  "animations": [
+    {
+      "title": "Vòng lặp: cộng 1 + 2 + 3",
+      "intro": "Để hoạt hình ngắn, ta chỉ cộng từ 1 đến 3. Hãy để ý cờ ZF, SF và việc dòng sáng nhảy ngược lên sau lệnh jle.",
+      "code": [
+        "_start:",
+        "    xor eax, eax",
+        "    mov ecx, 1",
+        ".loop:",
+        "    add eax, ecx",
+        "    inc ecx",
+        "    cmp ecx, 3",
+        "    jle .loop",
+        "    int 0x80"
+      ],
+      "notes": {
+        "2": "xor eax, eax: một số xor chính nó luôn bằng 0. Đây là biến tổng, bắt đầu bằng 0.",
+        "3": "ecx bằng 1. Đây là biến đếm i.",
+        "5": [
+          "Cộng i vào tổng: eax thành 1.",
+          "Cộng i vào tổng: eax thành 3.",
+          "Cộng i vào tổng: eax thành 6."
+        ],
+        "6": [
+          "Tăng i lên 2.",
+          "Tăng i lên 3.",
+          "Tăng i lên 4."
+        ],
+        "7": [
+          "cmp ecx, 3: lấy 2 trừ 3, chỉ cập nhật cờ, không lưu kết quả. Kết quả âm nên cờ SF bật.",
+          "cmp ecx, 3: lấy 3 trừ 3 bằng 0, nên cờ ZF bật.",
+          "cmp ecx, 3: lấy 4 trừ 3 bằng 1, dương. ZF và SF đều tắt."
+        ],
+        "8": [
+          "jle: nhảy nếu nhỏ hơn hoặc bằng. 2 nhỏ hơn 3 nên nhảy ngược lên nhãn loop.",
+          "3 bằng 3, vẫn thỏa nhỏ hơn hoặc bằng, nên nhảy lên lần nữa.",
+          "4 lớn hơn 3, không nhảy. CPU đi tiếp xuống dòng dưới, thoát khỏi vòng lặp."
+        ],
+        "9": "Thoát chương trình. Tổng nằm trong eax là 6."
+      },
+      "outro": "Vòng lặp kết thúc khi ecx bằng 4. Tổng eax bằng 6. Bài thật chỉ khác ở chỗ so sánh với 10 thay vì 3.",
+      "show": [
+        "eax",
+        "ecx"
+      ]
+    }
+  ]
+}
