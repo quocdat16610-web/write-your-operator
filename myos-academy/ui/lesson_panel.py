@@ -4,26 +4,29 @@ from __future__ import annotations
 import html
 import re
 
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QTextBrowser, QVBoxLayout, QWidget
+from PySide6.QtCore import QUrl, Signal
+from PySide6.QtGui import QCursor, QDesktopServices, QGuiApplication, QPalette
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QTextBrowser, QToolTip, QVBoxLayout, QWidget
 
+from core.lesson_content import load_lesson
 from core.progress import STATUS_LABELS, ProgressStore, Status
 from core.roadmap import (
     PHONE_REALITY_NOTE,
+    ALL_LESSONS,
     lesson_by_id,
     previous_lesson,
     references_for,
     stage_by_number,
     videos_for,
 )
+from ui.lesson_renderer import RenderedLesson, render_lesson
 
 WELCOME_HTML = """
 <h1>MyOS Academy</h1>
 <p>Chào mừng bạn! Ứng dụng này dạy bạn tự viết một hệ điều hành bằng C++,
-từ kernel x86 đầu tiên đến ARM64, với bài học do Claude soạn riêng cho bạn.</p>
+từ kernel x86 đầu tiên đến ARM64. Bài học được soạn sẵn trong app: không cần mạng, không cần API key.</p>
 <h3>Bắt đầu</h3>
 <ol>
-  <li>Mở <b>Cài đặt</b> (Ctrl+,) và dán API key Anthropic.</li>
   <li>Chọn một <b>giai đoạn</b> bên trái để xem mục tiêu, bài tập lớn và tài liệu tham khảo.</li>
   <li>Chọn một <b>bài</b> rồi bấm <b>Bắt đầu học</b>. Bài sau mở khi bài trước xong
       (chuột phải để mở khóa thủ công).</li>
@@ -43,6 +46,8 @@ class LessonPanel(QWidget):
         super().__init__()
         self.progress = progress
         self.lesson_id: str | None = None
+        self.revealed_hints: set[int] = set()
+        self.rendered: RenderedLesson | None = None
 
         self.title_label = QLabel()
         font = self.title_label.font()
@@ -72,7 +77,8 @@ class LessonPanel(QWidget):
         header_layout.addLayout(buttons)
 
         self.browser = QTextBrowser()
-        self.browser.setOpenExternalLinks(True)
+        self.browser.setOpenLinks(False)  # every link goes through _on_link
+        self.browser.anchorClicked.connect(self._on_link)
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.header)
@@ -130,8 +136,10 @@ class LessonPanel(QWidget):
 
     def show_lesson(self, lesson_id: str) -> None:
         self.lesson_id = lesson_id
+        self.revealed_hints = set()
         self.header.show()
         self.refresh()
+        self.browser.verticalScrollBar().setValue(0)
 
     def refresh(self) -> None:
         if self.lesson_id is None:
@@ -154,11 +162,39 @@ class LessonPanel(QWidget):
                 "trước, hoặc bấm <b>Mở khóa thủ công</b> nếu bạn đã biết nội dung bài trước.</p>"
             )
             return
-        self.browser.setHtml(
-            f"<p>Thuộc <b>Giai đoạn {stage.number}: {rich(stage.title)}</b>. "
-            f"Mục tiêu giai đoạn: {rich(stage.result)}.</p>"
-            "<p><i>Nội dung bài học do Claude soạn sẽ hiện ở đây (Bước 3).</i></p>"
-        )
+        source = load_lesson(lesson.id)
+        if source is None:
+            self.rendered = None
+            self.browser.setHtml(
+                f"<p>Thuộc <b>Giai đoạn {stage.number}: {rich(stage.title)}</b>. "
+                f"Mục tiêu giai đoạn: {rich(stage.result)}.</p>"
+                "<p><i>Bài này chưa được soạn. Nó sẽ có trong bản cập nhật tới của app.</i></p>"
+            )
+            return
+        dark = QGuiApplication.palette().color(QPalette.Base).lightness() < 128
+        self.rendered = render_lesson(source, self.revealed_hints, dark)
+        scroll = self.browser.verticalScrollBar().value()
+        self.browser.setHtml(self.rendered.html + self._next_lesson_html(lesson.id))
+        self.browser.verticalScrollBar().setValue(scroll)
+
+    def _next_lesson_html(self, lesson_id: str) -> str:
+        index = [lesson.id for lesson in ALL_LESSONS].index(lesson_id)
+        if index + 1 >= len(ALL_LESSONS):
+            return "<hr><p><b>🎉 Đây là bài cuối của lộ trình.</b></p>"
+        following = ALL_LESSONS[index + 1]
+        return (f"<hr><p>Học xong thì bấm <b>Đánh dấu đã xong</b> để mở "
+                f"<b>Bài {following.id}: {rich(following.title)}</b>.</p>")
+
+    def _on_link(self, url: QUrl) -> None:
+        scheme, target = url.scheme(), url.path()
+        if scheme == "copy" and self.rendered is not None:
+            QGuiApplication.clipboard().setText(self.rendered.code_blocks[int(target)].code)
+            QToolTip.showText(QCursor.pos(), "Đã copy vào clipboard")
+        elif scheme == "hint":
+            self.revealed_hints.add(int(target))
+            self.refresh()
+        elif scheme in ("http", "https"):
+            QDesktopServices.openUrl(url)
 
     # ---- Actions -------------------------------------------------------
     def _change(self, status: Status) -> None:

@@ -1,5 +1,5 @@
 # Python 3.9: newer PySide6 builds fail with "DLL load failed while importing Shiboken"
 PySide6-Essentials==6.6.3.1; python_version < "3.10"
 PySide6-Essentials>=6.7; python_version >= "3.10"
-anthropic>=0.40
-keyring>=25.0
+Markdown>=3.5
+Pygments>=2.17

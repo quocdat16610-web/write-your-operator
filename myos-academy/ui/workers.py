@@ -1,11 +1,9 @@
-"""Run blocking work (network calls) on a background QThread so the UI never freezes."""
+"""Run blocking work (e.g. text-to-speech) on a background QThread so the UI never freezes."""
 from __future__ import annotations
 
 from typing import Any, Callable
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
-
-from core.claude_client import friendly_error
 
 
 class _Registry(QObject):
@@ -44,7 +42,7 @@ class Worker(QObject):
         try:
             result = self._fn(*self._args)
         except Exception as exc:  # report every failure to the UI instead of crashing
-            self.failed.emit(friendly_error(exc))
+            self.failed.emit(str(exc))
         else:
             self.succeeded.emit(result)
 

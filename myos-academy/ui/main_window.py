@@ -1,11 +1,10 @@
 """Main window: roadmap tree on the left with lesson status, lesson area on the right."""
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
-from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QMessageBox, QSplitter
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QSplitter
 
-from core import credentials
 from core.progress import ProgressStore
 from core.roadmap import ALL_LESSONS
 from core.settings import AppSettings
@@ -15,6 +14,7 @@ from ui.roadmap_tree import RoadmapTree
 from ui.settings_dialog import SettingsDialog
 from ui.theme import apply_theme
 from ui.workers import wait_for_all
+
 
 class MainWindow(QMainWindow):
     def __init__(self, db: Database, settings: AppSettings) -> None:
@@ -29,9 +29,6 @@ class MainWindow(QMainWindow):
         self._build_central()
         self._build_status_bar()
         self._refresh_status()
-
-        # Ask for an API key once the window is visible.
-        QTimer.singleShot(0, self._prompt_for_key_if_missing)
 
     def _build_menu(self) -> None:
         file_menu = self.menuBar().addMenu("&Tệp")
@@ -75,44 +72,20 @@ class MainWindow(QMainWindow):
         self._refresh_status()
 
     def _build_status_bar(self) -> None:
-        self.key_label = QLabel()
         self.progress_label = QLabel()
-        self.model_label = QLabel()
-        self.statusBar().addWidget(self.key_label)
         self.statusBar().addWidget(self.progress_label)
-        self.statusBar().addPermanentWidget(self.model_label)
 
     def _refresh_status(self) -> None:
-        try:
-            has_key = bool(credentials.get_api_key())
-        except credentials.CredentialError:
-            has_key = False
-        self.key_label.setText("API key: đã lưu ✅" if has_key else "API key: chưa có ❌")
-        self.model_label.setText(f"Model: {self.settings.model}")
         done = self.progress.done_count()
         percent = round(100 * done / len(ALL_LESSONS))
-        self.progress_label.setText(f"  ·  Tiến độ: {done}/{len(ALL_LESSONS)} bài ({percent}%)")
-
-    def _prompt_for_key_if_missing(self) -> None:
-        try:
-            if credentials.get_api_key():
-                return
-        except credentials.CredentialError as exc:
-            QMessageBox.warning(self, "Credential Manager", str(exc))
-            return
-        answer = QMessageBox.question(
-            self, "Chưa có API key", "Bạn chưa nhập API key Anthropic. Mở Cài đặt ngay?"
-        )
-        if answer == QMessageBox.Yes:
-            self.open_settings()
+        self.progress_label.setText(f"Tiến độ: {done}/{len(ALL_LESSONS)} bài ({percent}%)")
 
     def open_settings(self) -> None:
         dialog = SettingsDialog(self.settings, self)
         if dialog.exec() == SettingsDialog.Accepted:
             self.settings.save(self.db)
             apply_theme(QApplication.instance(), self.settings.theme, self.settings.font_size)
-            self.roadmap_tree.refresh()  # locked-item colour depends on the palette
-        self._refresh_status()
+            self._on_progress_changed()  # tree colours and code highlighting depend on the palette
 
     def closeEvent(self, event: QCloseEvent) -> None:
         wait_for_all()

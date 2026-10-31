@@ -1,8 +1,8 @@
 # MyOS Academy
 
-Ứng dụng desktop Windows dạy bạn tự viết hệ điều hành bằng C++, với nội dung bài học do Claude soạn.
+Ứng dụng desktop Windows dạy bạn tự viết hệ điều hành bằng C++. Bài học được soạn sẵn và đóng gói trong app: không cần mạng, không cần API key.
 
-> Trạng thái: **Bước 2/7**: cây lộ trình 10 giai đoạn / 42 bài, trạng thái bài lưu SQLite.
+> Trạng thái: **Bước 3**: hiển thị bài học soạn sẵn. Đã có **Bài 0.1**; các bài sau được thêm dần.
 
 ## Cấu trúc thư mục
 
@@ -10,25 +10,26 @@
 myos-academy/
 ├── main.py              # Điểm khởi động app
 ├── requirements.txt
+├── content/lessons/     # Bài học soạn sẵn: 0.1.md, 0.2.md, ...
 ├── core/                # Logic không phụ thuộc giao diện
 │   ├── paths.py         # Đường dẫn %APPDATA%\MyOSAcademy
 │   ├── settings.py      # AppSettings: model, giọng đọc, cỡ chữ, giao diện
 │   ├── roadmap.py       # Lộ trình: giai đoạn, bài, tài liệu tham khảo, từ khóa video
 │   ├── progress.py      # Trạng thái bài (chưa học/đang học/xong) và luật mở khóa
-│   ├── credentials.py   # Lưu API key bằng keyring (Windows Credential Manager)
-│   └── claude_client.py # Tạo client anthropic + dịch lỗi sang tiếng Việt
+│   └── lesson_content.py # Đọc file bài học trong content/lessons
 ├── data/
 │   └── database.py      # SQLite + migration theo PRAGMA user_version
 └── ui/                  # Giao diện PySide6
     ├── main_window.py   # Cửa sổ chính
     ├── roadmap_tree.py  # Cây lộ trình bên trái (chuột phải: đổi trạng thái, mở khóa)
     ├── lesson_panel.py  # Trang chào, trang giai đoạn, trang bài
+    ├── lesson_renderer.py # Markdown → HTML: tô màu code, nút Copy, gợi ý ẩn, nút YouTube
     ├── settings_dialog.py
     ├── theme.py         # Sáng/tối, cỡ chữ
     └── workers.py       # Chạy tác vụ mạng trong luồng nền
 ```
 
-Dữ liệu người dùng nằm ở `%APPDATA%\MyOSAcademy\academy.db`. API key **không** nằm trong file này mà nằm trong Windows Credential Manager (mục `MyOSAcademy`).
+Tiến độ học và cài đặt nằm ở `%APPDATA%\MyOSAcademy\academy.db`.
 
 ## Chạy từ mã nguồn (Windows)
 
@@ -46,9 +47,15 @@ python main.py
 Nếu PowerShell báo không cho chạy script, chạy một lần lệnh
 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` rồi thử lại.
 
-## Lấy API key
+## Định dạng một bài học
 
-Vào console.anthropic.com → API Keys → Create Key, rồi dán key vào **Tệp → Cài đặt** trong app.
+Mỗi bài là một file Markdown `content/lessons/<mã bài>.md` với các mục `## Mục tiêu`, `## Lý thuyết`,
+`## Code`, `## Giải thích từng dòng` (bảng hai cột), `## Kết quả mong đợi`, `## Lỗi hay gặp`, `## Bài tập`,
+`## Câu hỏi kiểm tra`, `## Bản nghe`, `## Video tham khảo`. Các quy ước riêng:
+
+- Dòng bắt đầu bằng `Gợi ý:` bị ẩn, chỉ hiện khi bấm "Xin gợi ý".
+- Dòng `- youtube: từ khóa | ghi chú` thành nút mở trang tìm kiếm YouTube.
+- Khối code ghi tên file bằng ```` ```nasm title=boot.asm ````.
 
 ## Build file .exe
 

@@ -1,17 +1,9 @@
-"""User preferences, persisted in the settings table. The API key is NOT stored here (see credentials.py)."""
+"""User preferences, persisted in the settings table."""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
 
 from data.database import Database
-
-DEFAULT_MODEL = "claude-sonnet-5-5"
-KNOWN_MODELS = [
-    "claude-sonnet-5-5",
-    "claude-opus-5-5",
-    "claude-haiku-5-5",
-    "claude-fable-5-1",
-]
 
 TTS_ENGINES = {
     "edge": "edge-tts (giọng tiếng Việt, cần mạng)",
@@ -27,7 +19,6 @@ THEMES = {"system": "Theo hệ thống", "light": "Sáng", "dark": "Tối"}
 
 @dataclass
 class AppSettings:
-    model: str = DEFAULT_MODEL
     tts_engine: str = "edge"
     edge_voice: str = "vi-VN-HoaiMyNeural"
     pyttsx3_voice: str = ""
