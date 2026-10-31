@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import sys
 from pathlib import Path
 
 from core.paths import app_data_dir
@@ -28,6 +29,13 @@ def edge_rate(speed: float) -> str:
 
 
 def synthesize_edge(text: str, voice: str, speed: float, path: Path) -> None:
+    if sys.version_info[:3] < (3, 9, 2):
+        # Python 3.9.0/3.9.1: typing bug makes aiohttp/edge-tts fail with "unhashable type: 'list'".
+        raise SpeechError(
+            f"Python {sys.version.split()[0]} trên máy bạn có lỗi làm edge-tts không chạy được.\n"
+            "Cách sửa: cài Python 3.12 từ python.org, rồi bấm đúp run.bat (nó tự tạo lại môi trường).\n"
+            "Tạm thời có thể chọn bộ đọc pyttsx3 trong Cài đặt."
+        )
     try:
         import edge_tts
     except ImportError as exc:
