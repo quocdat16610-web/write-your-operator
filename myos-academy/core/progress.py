@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 
 from core.roadmap import ALL_LESSONS, Lesson, previous_lesson
 from data.database import Database
 
 
-class Status(StrEnum):
+class Status(str, Enum):
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     DONE = "done"
