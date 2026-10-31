@@ -1,44 +1,27 @@
-"""Main window: roadmap tree on the left (filled in step 2), lesson area on the right."""
+"""Main window: roadmap tree on the left with lesson status, lesson area on the right."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
-from PySide6.QtWidgets import (
-    QApplication,
-    QLabel,
-    QMainWindow,
-    QMessageBox,
-    QSplitter,
-    QTextBrowser,
-    QTreeWidget,
-    QTreeWidgetItem,
-)
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QMessageBox, QSplitter
 
 from core import credentials
+from core.progress import ProgressStore
+from core.roadmap import ALL_LESSONS
 from core.settings import AppSettings
 from data.database import Database
+from ui.lesson_panel import LessonPanel
+from ui.roadmap_tree import RoadmapTree
 from ui.settings_dialog import SettingsDialog
 from ui.theme import apply_theme
 from ui.workers import wait_for_all
-
-WELCOME_HTML = """
-<h1>MyOS Academy</h1>
-<p>Chào mừng bạn! Ứng dụng này dạy bạn tự viết một hệ điều hành bằng C++,
-từ kernel x86 đầu tiên đến ARM64, với bài học do Claude soạn riêng cho bạn.</p>
-<h3>Bắt đầu</h3>
-<ol>
-  <li>Mở <b>Cài đặt</b> (Ctrl+,) và dán API key Anthropic.</li>
-  <li>Bấm <b>Kiểm tra key</b> để chắc chắn key dùng được.</li>
-  <li>Chọn một bài trong cây lộ trình bên trái (có từ Bước 2).</li>
-</ol>
-"""
-
 
 class MainWindow(QMainWindow):
     def __init__(self, db: Database, settings: AppSettings) -> None:
         super().__init__()
         self.db = db
         self.settings = settings
+        self.progress = ProgressStore(db)
         self.setWindowTitle("MyOS Academy")
         self.resize(1200, 780)
 
@@ -68,21 +51,35 @@ class MainWindow(QMainWindow):
 
     def _build_central(self) -> None:
         splitter = QSplitter(Qt.Horizontal)
-        self.roadmap_tree = QTreeWidget()
-        self.roadmap_tree.setHeaderLabel("Lộ trình")
-        QTreeWidgetItem(self.roadmap_tree, ["(Cây lộ trình sẽ có ở Bước 2)"])
-        self.lesson_view = QTextBrowser()
-        self.lesson_view.setOpenExternalLinks(True)
-        self.lesson_view.setHtml(WELCOME_HTML)
+        self.roadmap_tree = RoadmapTree(self.progress)
+        self.lesson_panel = LessonPanel(self.progress)
+        self.roadmap_tree.lesson_selected.connect(self.lesson_panel.show_lesson)
+        self.roadmap_tree.stage_selected.connect(self.lesson_panel.show_stage)
+        self.roadmap_tree.progress_changed.connect(self._on_progress_changed)
+        self.lesson_panel.progress_changed.connect(self._on_progress_changed)
         splitter.addWidget(self.roadmap_tree)
-        splitter.addWidget(self.lesson_view)
-        splitter.setSizes([320, 880])
+        splitter.addWidget(self.lesson_panel)
+        splitter.setSizes([380, 820])
         self.setCentralWidget(splitter)
+        # Open the stage you are currently in, without selecting anything yet.
+        current = self.progress.current_lesson()
+        self.roadmap_tree.topLevelItem(current.stage).setExpanded(True)
+
+    def _on_progress_changed(self) -> None:
+        self.roadmap_tree.refresh()
+        current = self.roadmap_tree.currentItem()
+        if current is not None and current.data(0, Qt.UserRole)[0] == "stage":
+            self.lesson_panel.show_stage(current.data(0, Qt.UserRole)[1])
+        else:
+            self.lesson_panel.refresh()
+        self._refresh_status()
 
     def _build_status_bar(self) -> None:
         self.key_label = QLabel()
+        self.progress_label = QLabel()
         self.model_label = QLabel()
         self.statusBar().addWidget(self.key_label)
+        self.statusBar().addWidget(self.progress_label)
         self.statusBar().addPermanentWidget(self.model_label)
 
     def _refresh_status(self) -> None:
@@ -92,6 +89,9 @@ class MainWindow(QMainWindow):
             has_key = False
         self.key_label.setText("API key: đã lưu ✅" if has_key else "API key: chưa có ❌")
         self.model_label.setText(f"Model: {self.settings.model}")
+        done = self.progress.done_count()
+        percent = round(100 * done / len(ALL_LESSONS))
+        self.progress_label.setText(f"  ·  Tiến độ: {done}/{len(ALL_LESSONS)} bài ({percent}%)")
 
     def _prompt_for_key_if_missing(self) -> None:
         try:
@@ -111,6 +111,7 @@ class MainWindow(QMainWindow):
         if dialog.exec() == SettingsDialog.Accepted:
             self.settings.save(self.db)
             apply_theme(QApplication.instance(), self.settings.theme, self.settings.font_size)
+            self.roadmap_tree.refresh()  # locked-item colour depends on the palette
         self._refresh_status()
 
     def closeEvent(self, event: QCloseEvent) -> None:

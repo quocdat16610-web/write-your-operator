@@ -2,7 +2,7 @@
 
 Ứng dụng desktop Windows dạy bạn tự viết hệ điều hành bằng C++, với nội dung bài học do Claude soạn.
 
-> Trạng thái: **Bước 1/7**: khung app, Cài đặt, lưu API key.
+> Trạng thái: **Bước 2/7**: cây lộ trình 10 giai đoạn / 42 bài, trạng thái bài lưu SQLite.
 
 ## Cấu trúc thư mục
 
@@ -13,12 +13,16 @@ myos-academy/
 ├── core/                # Logic không phụ thuộc giao diện
 │   ├── paths.py         # Đường dẫn %APPDATA%\MyOSAcademy
 │   ├── settings.py      # AppSettings: model, giọng đọc, cỡ chữ, giao diện
+│   ├── roadmap.py       # Lộ trình: giai đoạn, bài, tài liệu tham khảo, từ khóa video
+│   ├── progress.py      # Trạng thái bài (chưa học/đang học/xong) và luật mở khóa
 │   ├── credentials.py   # Lưu API key bằng keyring (Windows Credential Manager)
 │   └── claude_client.py # Tạo client anthropic + dịch lỗi sang tiếng Việt
 ├── data/
 │   └── database.py      # SQLite + migration theo PRAGMA user_version
 └── ui/                  # Giao diện PySide6
     ├── main_window.py   # Cửa sổ chính
+    ├── roadmap_tree.py  # Cây lộ trình bên trái (chuột phải: đổi trạng thái, mở khóa)
+    ├── lesson_panel.py  # Trang chào, trang giai đoạn, trang bài
     ├── settings_dialog.py
     ├── theme.py         # Sáng/tối, cỡ chữ
     └── workers.py       # Chạy tác vụ mạng trong luồng nền

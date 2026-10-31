@@ -12,6 +12,17 @@ MIGRATIONS: list[str] = [
         value TEXT NOT NULL
     );
     """,
+    """
+    CREATE TABLE lesson_progress (
+        lesson_id         TEXT PRIMARY KEY,
+        status            TEXT NOT NULL DEFAULT 'not_started'
+                          CHECK (status IN ('not_started', 'in_progress', 'done')),
+        manually_unlocked INTEGER NOT NULL DEFAULT 0,
+        started_at        TEXT,
+        completed_at      TEXT,
+        updated_at        TEXT NOT NULL
+    );
+    """,
 ]
 
 
