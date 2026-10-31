@@ -2,7 +2,7 @@
 
 Ứng dụng desktop Windows dạy bạn tự viết hệ điều hành bằng C++. Bài học được soạn sẵn và đóng gói trong app: không cần mạng, không cần API key.
 
-> Trạng thái: **Bước 4**: bài học soạn sẵn + nghe đọc (giảng cả bài hoặc bản tóm tắt). Đã có **Bài 0.1**; các bài sau được thêm dần.
+> Trạng thái: **Bước 4**: bài học soạn sẵn + nghe đọc (giảng cả bài hoặc bản tóm tắt). Đã có **Bài 0.1, 0.2**; các bài sau được thêm dần.
 
 ## Cấu trúc thư mục
 
