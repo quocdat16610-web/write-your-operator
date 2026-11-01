@@ -118,6 +118,7 @@ class LessonPanel(QWidget):
 
         self.reader = ReadAloudController(settings, self)
         self.reader.segment_started.connect(self._on_segment_started)
+        self.reader.buffering.connect(self._on_buffering)
         self.reader.stopped.connect(self._on_reading_stopped)
         self.reader.error.connect(self._on_reading_error)
 
@@ -289,6 +290,9 @@ class LessonPanel(QWidget):
     def _on_segment_started(self, index: int) -> None:
         self.reading_label.setText(f"Đang đọc đoạn {index + 1}/{len(self.segments)}")
         self._highlight(self.segments[index].anchor)
+
+    def _on_buffering(self, index: int) -> None:
+        self.reading_label.setText(f"Đang tải giọng đọc đoạn {index + 1}… (cần Internet)")
 
     def _on_reading_stopped(self) -> None:
         self.stop_button.setEnabled(False)

@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import shutil
 import sys
+import time
+from pathlib import Path
 
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
-from core.tts import SpeechError
+from core.tts import SpeechError, audio_duration
 
 ALIAS = "myos_tts"
+GRACE_SECONDS = 0.6  # MCI can misjudge mp3 length; never wait longer than the real length plus this
 
 
 def _mci(command: str) -> str:
@@ -40,13 +43,18 @@ class AudioPlayer(QObject):
         self._timer.setInterval(150)
         self._timer.timeout.connect(self._poll)
         self._process: QProcess | None = None
+        self._started = 0.0
+        self._expected: float | None = None
 
     def play(self, path: str) -> None:
         self.stop()
+        self._expected = audio_duration(Path(path))
+        self._started = time.monotonic()
         if self._windows:
             _mci(f'open "{path}" type mpegvideo alias {ALIAS}')
             self._open = True
             _mci(f"play {ALIAS}")
+            self._started = time.monotonic()  # opening a file can take a moment; count from "play"
             self._timer.start()
             return
         player = shutil.which("ffplay") or shutil.which("mpg123") or shutil.which("paplay")
@@ -77,7 +85,8 @@ class AudioPlayer(QObject):
             mode = _mci(f"status {ALIAS} mode")
         except SpeechError:
             mode = "stopped"
-        if mode == "stopped":
+        overdue = self._expected is not None and time.monotonic() - self._started > self._expected + GRACE_SECONDS
+        if mode == "stopped" or overdue:
             self.stop()
             self.finished.emit()
 

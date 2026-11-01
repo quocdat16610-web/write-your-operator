@@ -13,6 +13,9 @@ from pathlib import Path
 from core.paths import app_data_dir
 
 
+EDGE_BITRATE = 48_000  # edge-tts always returns audio-24khz-48kbitrate-mono-mp3 (constant bitrate)
+
+
 class SpeechError(Exception):
     """Raised with a Vietnamese message the UI can show directly."""
 
@@ -22,6 +25,20 @@ def cache_path(engine: str, voice: str, speed: float, text: str) -> Path:
     folder.mkdir(exist_ok=True)
     key = hashlib.sha1(f"{engine}|{voice}|{speed}|{text}".encode("utf-8")).hexdigest()
     return folder / f"{key}.{'mp3' if engine == 'edge' else 'wav'}"
+
+
+def audio_duration(path: Path) -> float | None:
+    """Length of a cached clip in seconds, or None if unknown."""
+    try:
+        if path.suffix == ".mp3":
+            return path.stat().st_size * 8 / EDGE_BITRATE
+        if path.suffix == ".wav":
+            import wave
+            with wave.open(str(path), "rb") as clip:
+                return clip.getnframes() / clip.getframerate()
+    except Exception:  # unreadable clip: fall back to the player's own end detection
+        return None
+    return None
 
 
 def edge_rate(speed: float) -> str:

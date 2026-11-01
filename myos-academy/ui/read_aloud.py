@@ -16,7 +16,7 @@ from core.settings import AppSettings
 from core.speech_text import Segment
 from ui.audio_player import AudioPlayer
 
-PREFETCH = 2  # paragraphs synthesised ahead of the one playing
+PREFETCH = 3  # paragraphs synthesised ahead of the one playing
 
 
 @dataclass(frozen=True)
@@ -66,6 +66,7 @@ class _SynthThread(threading.Thread):
 
 class ReadAloudController(QObject):
     segment_started = Signal(int)
+    buffering = Signal(int)  # waiting for paragraph <index> to finish downloading
     stopped = Signal()  # finished the list, or stop() was called
     error = Signal(str)
 
@@ -156,6 +157,7 @@ class ReadAloudController(QObject):
         elif self.index in self._paths:
             self._play_current()
         else:
+            self.buffering.emit(self.index)
             self._request_ahead()  # wait for _on_ready
 
     def _on_failed(self, generation: int, message: str) -> None:
